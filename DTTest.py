@@ -2,7 +2,7 @@
 """
 This software demonstrate non-robustness of Decision threes.
 Used database is Breast Cancer database: Obtained from the University Medical
-Centre, Institute of Oncology, Ljubljana, Yugoslavia. 
+Centre, Institute of Oncology, Ljubljana, Yugoslavia.
 Available online: https://archive.ics.uci.edu/dataset/14/breast+cancer
 
 
@@ -12,6 +12,7 @@ Created on Tue Jun 11 18:39:10 2024
 
 @author: em322
 """
+# pylint: disable=C0103
 
 import pickle
 import numpy as np
@@ -23,7 +24,7 @@ import seaborn as sns
 
 def readData():
     '''
-    readData read file "breast-cancer.data" from work directory, convert text 
+    readData read file "breast-cancer.data" from work directory, convert text
     fields into float numbers, removed incomplete records and return result as
     two np.ndarray X for inputs and y for labels.
     This software developed only for this database and is not universal.
@@ -39,7 +40,7 @@ def readData():
     # Define lists of categories for decoding
     lists = [["20-29", "30-39", "40-49", "50-59", "60-69", "70-79"],
              ["ge40", "lt40", "premeno"],
-             ["0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", 
+             ["0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34",
               "35-39", "40-44", "45-49", "50-54"],
              ["0-2", "3-5", "6-8", "9-11", "12-14", "15-17", "24-26"],
              ["no", "yes"],
@@ -48,7 +49,7 @@ def readData():
              ["left_low", "right_up", "left_up", "right_low", "central"],
              ["no\n", "yes\n"]]
     # Load data and prepare datasets
-    with open('breast-cancer.data') as file:
+    with open('breast-cancer.data', encoding="utf-8") as file:
         content = file.readlines()
     # There is no header
     # Create tables for reading
@@ -56,8 +57,8 @@ def readData():
     y = np.zeros(len(content) - 9)
     # p is row to write
     p = 0
-    for k in range(len(content)):
-        tmp = content[k].split(",")
+    for line in content:
+        tmp = line.split(",")
         # Rows with missing value "?" Must be ignored
         if "?" in tmp:
             continue
@@ -72,7 +73,7 @@ def readData():
 
 def splitCreator(X, y, nSplits, testSize):
     '''
-    splitCreator creates nSplits independent stratified splits of X and y to training 
+    splitCreator creates nSplits independent stratified splits of X and y to training
     and test sets. Results of splitting are written to files "TestTrain_n.npz",
     where n is split number. Each file contains 4 arrays: XTr, XTe, yTr, yTe
 
@@ -93,10 +94,10 @@ def splitCreator(X, y, nSplits, testSize):
 
     '''
     for n in range(nSplits):
-        XTr, XTe, yTr, yTe = train_test_split(X, y, test_size=testSize, 
-                                              stratify=y) 
+        XTr, XTe, yTr, yTe = train_test_split(X, y, test_size=testSize,
+                                              stratify=y)
         # fil = open("TestTrain_{:03d}.npz".format(n))
-        np.savez("TestTrain_{:03d}.npz".format(n), XTr=XTr, XTe=XTe, 
+        np.savez(f"TestTrain_{n:03d}.npz", XTr=XTr, XTe=XTe,
                  yTr=yTr, yTe=yTe)
 
 def loadSplit(n):
@@ -120,13 +121,13 @@ def loadSplit(n):
     yTe : 1D np.ndarray
         Labels of test set.
     '''
-    npzfile = np.load("TestTrain_{:03d}.npz".format(n))
+    npzfile = np.load(f"TestTrain_{n:03d}.npz")
     XTr = npzfile['XTr']
     XTe = npzfile['XTe']
     yTr = npzfile['yTr']
     yTe = npzfile['yTe']
     return (XTr, XTe, yTr, yTe)
-    
+
 def oneTree(n):
     '''
     oneTree create Decision tree for dataset in file "TestTrain_n.npz", where n
@@ -158,12 +159,12 @@ def oneTree(n):
     mdl.fn = np.sum(a & ~aa)
     mdl.fp = np.sum(~a & aa)
     mdl.tp = np.sum(~a & ~aa)
-    with open("DT_{:03d}.pkl".format(n), 'wb') as outp:
+    with open(f"DT_{n:03d}.pkl", 'wb') as outp:
         pickle.dump(mdl, outp, pickle.HIGHEST_PROTOCOL)
 
 def reportDT(nSplits):
     '''
-    reportDT create report for all trees. For each tree the following values 
+    reportDT create report for all trees. For each tree the following values
     are calculated:
     Split number, number of nodes, depth, accuracy, TPR, TNR, PPV, NPV
 
@@ -174,33 +175,33 @@ def reportDT(nSplits):
 
     Returns
     -------
-    res : 2D nd array
+    tmp : 2D nd array
         table with 8 columns: Split number, number of nodes, depth, accuracy,
         TPR, TNR, PPV, NPV
 
     '''
-    
-    res = np.zeros((nSplits, 8))
+
+    tmp = np.zeros((nSplits, 8))
     for n in range(nSplits):
         # Load tree
-        with open("DT_{:03d}.pkl".format(n), 'rb') as inp:
-            mdl = pickle.load(inp)        
+        with open(f"DT_{n:03d}.pkl", 'rb') as inp:
+            mdl = pickle.load(inp)
         # Calculate required fields
-        res[n, 0] = n
-        res[n, 1] = mdl.tree_.node_count
-        res[n, 2] = mdl.get_depth()
-        res[n, 3] = (mdl.tp + mdl.tn) / (mdl.tp + mdl.tn + mdl.fp + mdl.fn)
-        res[n, 4] = mdl.tp / (mdl.tp + mdl.fn)
-        res[n, 5] = mdl.tn / (mdl.tn + mdl.fp)
-        res[n, 6] = mdl.tp / (mdl.tp + mdl.fp)
-        res[n, 7] = mdl.tn / (mdl.tn + mdl.fn)
+        tmp[n, 0] = n
+        tmp[n, 1] = mdl.tree_.node_count
+        tmp[n, 2] = mdl.get_depth()
+        tmp[n, 3] = (mdl.tp + mdl.tn) / (mdl.tp + mdl.tn + mdl.fp + mdl.fn)
+        tmp[n, 4] = mdl.tp / (mdl.tp + mdl.fn)
+        tmp[n, 5] = mdl.tn / (mdl.tn + mdl.fp)
+        tmp[n, 6] = mdl.tp / (mdl.tp + mdl.fp)
+        tmp[n, 7] = mdl.tn / (mdl.tn + mdl.fn)
     return res
 
 def oneLR(n):
     '''
-    oneLR create logistic regression model for dataset in file 
-    "TestTrain_n.npz", where n is specified splitting. Then model is tested on 
-    test data, basic values (TP, TN, FP, FN) are calculated and object with 
+    oneLR create logistic regression model for dataset in file
+    "TestTrain_n.npz", where n is specified splitting. Then model is tested on
+    test data, basic values (TP, TN, FP, FN) are calculated and object with
     this values is written to file "LR_n.pkl".
 
     Parameters
@@ -227,12 +228,12 @@ def oneLR(n):
     mdl.fn = np.sum(a & ~aa)
     mdl.fp = np.sum(~a & aa)
     mdl.tp = np.sum(~a & ~aa)
-    with open("LR_{:03d}.pkl".format(n), 'wb') as outp:
+    with open(f"LR_{n:03d}.pkl", 'wb') as outp:
         pickle.dump(mdl, outp, pickle.HIGHEST_PROTOCOL)
-    
+
 def reportLR(nSplits):
     '''
-    reportLR create report for all LR models. For each model the following values 
+    reportLR create report for all LR models. For each model the following values
     are calculated:
     Split number, accuracy, TPR, TNR, PPV, NPV
 
@@ -243,78 +244,69 @@ def reportLR(nSplits):
 
     Returns
     -------
-    res : 2D nd array
+    tmp : 2D nd array
         table with 6 columns: Split number, accuracy, TPR, TNR, PPV, NPV
 
     '''
-    
-    res = np.zeros((nSplits, 6))
+
+    tmp = np.zeros((nSplits, 6))
     for n in range(nSplits):
         # Load tree
-        with open("LR_{:03d}.pkl".format(n), 'rb') as inp:
-            mdl = pickle.load(inp)        
+        with open(f"LR_{n:03d}.pkl", 'rb') as inp:
+            mdl = pickle.load(inp)
         # Calculate required fields
-        res[n, 0] = n
-        res[n, 1] = (mdl.tp + mdl.tn) / (mdl.tp + mdl.tn + mdl.fp + mdl.fn)
-        res[n, 2] = mdl.tp / (mdl.tp + mdl.fn)
-        res[n, 3] = mdl.tn / (mdl.tn + mdl.fp)
-        res[n, 4] = mdl.tp / (mdl.tp + mdl.fp)
-        res[n, 5] = mdl.tn / (mdl.tn + mdl.fn)
+        tmp[n, 0] = n
+        tmp[n, 1] = (mdl.tp + mdl.tn) / (mdl.tp + mdl.tn + mdl.fp + mdl.fn)
+        tmp[n, 2] = mdl.tp / (mdl.tp + mdl.fn)
+        tmp[n, 3] = mdl.tn / (mdl.tn + mdl.fp)
+        tmp[n, 4] = mdl.tp / (mdl.tp + mdl.fp)
+        tmp[n, 5] = mdl.tn / (mdl.tn + mdl.fn)
     return res
 
 # What to do. Bit flag:
-# 0 (1) - read data
-# 1 (2) - creaate splittings
-# 2 (4) - create and test trees
-# 3 (8) - Form preliminary report for formed DTs
-# 4 (16) - form LR models and preliminary report.
+# 0 (1) - read data and creaate splittings
+# 1 (2) - create and test trees, Form preliminary report for formed DTs
+# 2 (4) - form LR models and preliminary report.
 
-what = 0
+what = 7
 # Number of splits
-nSplits = 100
+nSplit = 100
 # Fraction of test size
-testSize = 0.2
+testPart = 0.2
 
 # Load data
 if what & 1 == 1:
-    (X, y) = readData()
-
-# Create splittings
-if what & 2 == 2:
-    splitCreator(X, y, nSplits, testSize)
+    (data, labels) = readData()
+    # Create splittings
+    splitCreator(data, labels, nSplit, testPart)
 
 # Create and test trees
-if what & 4 == 4:
-    for n in range(nSplits):
-        oneTree(n)
-        
-# Form preliminary report for formed DTs
-if what & 8 == 8:
-    res = reportDT(nSplits)
-    with open('DT.csv', 'w') as f:
+if what & 2 == 2:
+    for nn in range(nSplit):
+        oneTree(nn)
+    # Form preliminary report for formed DTs
+    res = reportDT(nSplit)
+    with open('DT.csv', 'w', encoding="utf-8") as f:
         f.write("#,# of nodes,Depth,Accuracy,TPR,TNR,PPV,NPV\n")
-        for n in range(nSplits):
-            for k in range(3):
-                f.write("{:3.0f},".format(res[n, k]))
-            for k in range(3, 8):
-                f.write("{:6.4f},".format(res[n, k]))
+        for nn in range(nSplit):
+            for m in range(3):
+                f.write(f"{res[nn, m]:3.0f},")
+            for m in range(3, 8):
+                f.write(f"{res[nn, m]:6.4f},")
             f.write("\n")
 
-# Generate LR and corresponding report.
-if what & 16 == 16:
-    for n in range(nSplits):
-        oneLR(n)
-    res = reportLR(nSplits)
-    with open('LR.csv', 'w') as f:
+# Generate LR and corresponding report. Draw distributions
+if what & 4 == 4:
+    for nn in range(nSplit):
+        oneLR(nn)
+    res = reportLR(nSplit)
+    with open('LR.csv', 'w', encoding="utf-8") as f:
         f.write("#,Accuracy,TPR,TNR,PPV,NPV\n")
-        for n in range(nSplits):
-            f.write("{:3.0f}".format(res[n, 0]))
-            for k in range(1, 6):
-                f.write(",{:6.4f}".format(res[n, k]))
+        for nn in range(nSplit):
+            f.write(f"{res[nn, 0]:3.0f}")
+            for m in range(1, 6):
+                f.write(f",{res[nn, m]:6.4f}")
             f.write("\n")
-# Form distributions    
-if 1 == 1:        
-    res = reportLR(nSplits)
-    for k in range(1,6):
-        sns.displot(res[:, k], kind="kde")
-        plt.savefig("Dist_{:d}.png".format(k))
+    for m in range(1,6):
+        sns.displot(res[:, m], kind="kde")
+        plt.savefig(f"Dist_{m:d}.png")
